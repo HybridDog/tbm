@@ -282,7 +282,7 @@ end
 
 minetest.register_node("tbm:tbm", {
 	description = "Tunnel Boring Machine",
-	tiles = {"tbm_top.png", "tbm_bottom.png", "tbm_side.png", "tbm_side2.png", "tbm_front.png", "tbm_back.png"},
+	tiles = {"tbm_top.png", "tbm_bottom.png", "tbm_side.png", "tbm_side.png^[transformFX", "tbm_front.png", "tbm_back.png"},
 	paramtype = "light",
 	paramtype2 = 'facedir',
 	drawtype = "nodebox",
