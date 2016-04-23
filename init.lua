@@ -1,4 +1,8 @@
 -- a tunnel boring machine
+-- sound from http://www.freesound.org/people/nrn-/sounds/106255/
+
+-- 10 or 2
+tbm_digging_speed = 10
 
 tbm = {}
 
@@ -7,6 +11,14 @@ tbm = {}
 -- Y for Y offset from current position and Z for Z offset etc.
 -- This is a easy way to determine the 4x4 box that should be
 -- mined from the current position based on the current facedir
+
+for y = 2,-1,-1 do
+	--[[for a = -1,1,2 do
+		for z = -1,1 do
+		end
+	end]]
+end
+
 tbm.offsets = { -- facedir indexed (+1)
 	{ -- facedir = 0
 		{ -- first line
@@ -104,7 +116,7 @@ tbm.rowbelownewpos = 4
 
 tbm.placetbm = function(pos, fuel)
 	-- will correctly pace a TBM at the position indicated
-	local meta = minetest.env:get_meta(pos)
+	local meta = minetest.get_meta(pos)
 	meta:set_string("formspec",
 		"size[8,9]"..
 		"list[current_name;main;0,0;1,4;]"..
@@ -157,12 +169,12 @@ end
 tbm.dropitem = function(pos, item)
     -- Take item in any format
     --[[
-    local obj = minetest.env:add_entity(pos, "__builtin:item")
+    local obj = minetest.add_entity(pos, "__builtin:item")
     obj:get_luaentity():set_item(stack:to_string())
     return obj
     ]]--
     local stack = ItemStack(item)
-    local meta = minetest.env:get_meta(pos)
+    local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
     
     if inv:room_for_item("inv", stack) then
@@ -188,7 +200,7 @@ end
 tbm.getstackcount = function(pos, name)
 	-- will return the ammount of name in all stacks at position pos
 	local h = 0
-	local inv = minetest.env:get_meta(pos):get_inventory()
+	local inv = minetest.get_meta(pos):get_inventory()
 	local found = 0
 	if not inv:is_empty("main") then
 		for h = 1, inv:get_size("main") do
@@ -206,7 +218,7 @@ end
 tbm.setstackcount = function(pos, name, count)
 	-- will make n stacks at position pos so that they
 	-- together makes up for count items of the item name
-	local inv = minetest.env:get_meta(pos):get_inventory()
+	local inv = minetest.get_meta(pos):get_inventory()
 	local found = tbm.getstackcount(pos, name) + count
 	local numberofstacks = math.floor(found / 99)
 	local laststacksize = found % 99
@@ -230,7 +242,7 @@ tbm.breakstones = function(pos, facing)
 			bpos.x = pos.x + block[i][j].X
 			bpos.y = pos.y + block[i][j].Y
 			bpos.z = pos.z + block[i][j].Z
-			local current = minetest.env:get_node(bpos)
+			local current = minetest.get_node(bpos)
 			if current.name ~= 'air' and current.name ~= 'ignore' then 
 				if current.name == "default:mese" then
 					tbm.dropitem(pos, "default:mese")
@@ -243,7 +255,7 @@ tbm.breakstones = function(pos, facing)
 						--cobbleresult = cobbleresult + 1
 					end
 				end
-				minetest.env:dig_node(bpos)
+				minetest.dig_node(bpos)
 			end
 		end
 	end
@@ -259,7 +271,7 @@ tbm.placecobble = function(pos, facing)
 		ppos.x = pos.x + box[tbm.rowbelownewpos][i].X
 		ppos.y = pos.y + box[tbm.rowbelownewpos][i].Y
 		ppos.z = pos.z + box[tbm.rowbelownewpos][i].Z
-		minetest.env:add_node(ppos, { name = "default:cobble" })
+		minetest.add_node(ppos, { name = "default:cobble" })
 	end
 end
 
@@ -270,14 +282,14 @@ tbm.placetorch = function(pos, facing)
 	ppos.x = pos.x + box[tbm.newposline][1].X
 	ppos.y = pos.y + box[tbm.newposline][1].Y
 	ppos.z = pos.z + box[tbm.newposline][1].Z
-	minetest.env:place_node(ppos, { name = "default:torch" })
+	minetest.place_node(ppos, { name = "default:torch" })
 end
 
 tbm.placetrack = function(pos, facing)
 	-- places a track behind the machine
 	-- checks if carts mod is present
 	local ppos = tbm.findoldpos(pos, facing)
-	minetest.env:place_node(ppos, { name = "default:rail" } )
+	minetest.place_node(ppos, { name = "default:rail" } )
 end
 
 minetest.register_node("tbm:tbm", {
@@ -305,22 +317,25 @@ minetest.register_node("tbm:tbm", {
 	},
 	on_construct = function(pos)
 		tbm.placetbm(pos, "0")
-		minetest.after(10, function()
+		minetest.after(tbm_digging_speed, function()
 			tbm.drill(pos)
 		end)
 	end,
 	can_dig = function(pos,player)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		local inv = meta:get_inventory()
 		return inv:is_empty("main") and inv:is_empty("inv")
 	end,
 	on_metadata_inventory_put = function(pos, listname, index, stack, player)
 		if listname == "main" then
-		  minetest.after(10, function()
+		  minetest.after(tbm_digging_speed, function()
 			  tbm.drill(pos)
 		  end)
 	  end
 	end,
+--	on_punch = function(pos)
+--		tbm.drill(pos)
+--	end
 })
 
 minetest.register_craft({
@@ -332,9 +347,12 @@ minetest.register_craft({
 	}
 })
 
+--local creative_enabled = minetest.setting_getbool("creative_mode")
+local creative_enabled = false
+
 tbm.drill = function(pos)
-  local facing = minetest.env:get_node(pos).param2
-	local lightcount = minetest.env:get_node(pos).param1
+  local facing = minetest.get_node(pos).param2
+	local lightcount = minetest.get_node(pos).param1
 	local newpos = tbm.findnewpos(pos, facing)
 	local oldpos = tbm.findoldpos(pos, facing)
 	local coalcount = tbm.getstackcount(pos, "default:coal_lump")
@@ -342,7 +360,7 @@ tbm.drill = function(pos)
 	local torchcount = tbm.getstackcount(pos, "default:torch")
 	local railcount = tbm.getstackcount(pos, "default:rail")
 	-- Current metadata
-	local meta = minetest.env:get_meta(pos)
+	local meta = minetest.get_meta(pos)
 	-- Current inventory
 	local inv = meta:get_inventory()
 	local fuel = tonumber(meta:get_string("fuel"))
@@ -378,22 +396,31 @@ tbm.drill = function(pos)
 			railcount = railcount - 1
 		end
 		-- create new TBM at the new position 
-		minetest.env:add_node(newpos, { name="tbm:tbm", param1=lightcount, param2=facing })
+		minetest.add_node(newpos, { name="tbm:tbm", param1=lightcount, param2=facing })
 		-- create inventary and other meta data at the new position
 		tbm.placetbm(newpos, tostring(fuel))
-		-- move tbm stack to the new position
-		tbm.setstackcount(newpos, "default:coal_lump", coalcount)
-		tbm.setstackcount(newpos, "default:cobble", cobblecount)
-		tbm.setstackcount(newpos, "default:torch", torchcount)
-		tbm.setstackcount(newpos, "default:rail", railcount)
-		
+		if not creative_enabled then
+			-- move tbm stack to the new position
+			tbm.setstackcount(newpos, "default:coal_lump", coalcount)
+			tbm.setstackcount(newpos, "default:cobble", cobblecount)
+			tbm.setstackcount(newpos, "default:torch", torchcount)
+			tbm.setstackcount(newpos, "default:rail", railcount)
+		else
+			tbm.setstackcount(newpos, "default:coal_lump", 99)
+			tbm.setstackcount(newpos, "default:cobble", 99)
+			tbm.setstackcount(newpos, "default:torch", 99)
+			tbm.setstackcount(newpos, "default:rail", 99)
+		end
+
 		local list = inv:get_list("inv")
-		local newmeta = minetest.env:get_meta(newpos)
+		local newmeta = minetest.get_meta(newpos)
 		local inv = newmeta:get_inventory()
 		inv:set_list("inv", list)
 		-- remove tbm from old position
-		minetest.env:remove_node(pos)
+		minetest.remove_node(pos)
 	else
 		meta:set_string("fuel", "0")
 	end
+	--play sound
+	minetest.sound_play("tbm", {pos = pos, gain = 1.0, max_hear_distance = 16,})
 end
