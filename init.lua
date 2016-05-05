@@ -283,6 +283,34 @@ tbm.placetrack = function(pos, facing)
 	-- checks if carts mod is present
 	minetest.place_node(tbm.findoldpos(pos, facing), { name = "default:rail" } )
 end
+--[[
+local box = {
+	{-3/16, 0, -8/16, 4/16, -7/16, 4/16},
+	{-4/16, 1/16, 2/16, 5/16, -8/16, 3/16},
+	{-2/16, -1/16, 4/16, 3/16, -6/16, 5/16},
+	{-1/16, -2/16, 5/16, 2/16, -5/16, 6/16},
+	{0, -3/16, 6/16, 1/16, -4/16, 7/16},
+	{-3/16, -7/16, -2/16, 4/16, -8/16, 0},
+	{-3/16, -7/16, -7/16, 4/16, -8/16, -5/16},
+}
+local selbox = {}
+for n = 1, #box do
+	selbox[n] = {}
+	local sb = box[n]
+	for i,v in pairs(sb) do
+		selbox[n][i] = v*3
+	end
+	sb[2] = sb[2] + 0.5
+	sb[5] = sb[5] + 0.5
+end
+local nodebox = {
+	type = "fixed",
+	fixed = box,
+}
+selbox = {
+	type = "fixed",
+	fixed = selbox,
+}visual_scale = 3,--]]
 
 minetest.register_node("tbm:tbm", {
 	description = "Tunnel Boring Machine",
